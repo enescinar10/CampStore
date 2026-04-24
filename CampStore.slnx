@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="CampStore.BusinessLayer/CampStore.BusinessLayer.csproj" Id="371715e6-e19d-459c-9957-583350568232" />
+  <Project Path="CampStore.DataAccessLayer/CampStore.DataAccessLayer.csproj" Id="20b3f7c0-e098-43d6-83a8-868088ed9aa7" />
+  <Project Path="CampStore.Entities/CampStore.Entities.csproj" Id="fa56f21b-3bc7-4ef5-abd4-ff615ba156d2" />
+  <Project Path="CampStore.UI/CampStore.UI.csproj" Id="202abe57-1ca8-4103-bc4b-02e016d89f7f" />
+</Solution>
