@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-// StokDAL.cs — Veri Katmanı
-// StokHareket tablosuna ait tüm işlemler stored procedure ile yapılır.
 using System.Data;
 using System.Data.SqlClient;
 using CampStore.Entities;
 
+// StokDAL.cs — Veri Katmanı
+// StokHareket tablosuna ait tüm işlemler stored procedure ile yapılır.
 namespace CampStore.DataAccessLayer
 {
     public class StokDAL
@@ -28,8 +28,15 @@ namespace CampStore.DataAccessLayer
                 komut.Parameters.AddWithValue("@CikisMiktar", s.CikisMiktar);
                 komut.Parameters.AddWithValue("@Tarih", s.Tarih);
 
-                baglanti.Open();
-                komut.ExecuteNonQuery();
+                try
+                {
+                    baglanti.Open();
+                    komut.ExecuteNonQuery();
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Stok hareketi eklenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
         }
 
@@ -45,8 +52,15 @@ namespace CampStore.DataAccessLayer
                 SqlCommand komut = new SqlCommand("sp_StokHareketListele", baglanti);
                 komut.CommandType = CommandType.StoredProcedure;
 
-                SqlDataAdapter adapter = new SqlDataAdapter(komut);
-                adapter.Fill(tablo);
+                try
+                {
+                    SqlDataAdapter adapter = new SqlDataAdapter(komut);
+                    adapter.Fill(tablo);
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Stok hareketleri listelenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
 
             return tablo;
@@ -58,38 +72,65 @@ namespace CampStore.DataAccessLayer
         public DataTable StokHareketListeleByUrun(int urunID)
         {
             DataTable tablo = new DataTable();
+
             using (SqlConnection baglanti = DbBaglanti.BaglantiGetir())
             {
                 // sp_StokHareketListeleByUrun değil sp_StokHareketListele kullan
                 // çünkü o SP veritabanında yok, filtreyi C# tarafında yapıyoruz
                 SqlCommand komut = new SqlCommand("sp_StokHareketListele", baglanti);
                 komut.CommandType = CommandType.StoredProcedure;
-                SqlDataAdapter adapter = new SqlDataAdapter(komut);
-                adapter.Fill(tablo);
+
+                try
+                {
+                    SqlDataAdapter adapter = new SqlDataAdapter(komut);
+                    adapter.Fill(tablo);
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Ürüne göre stok hareketleri listelenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
 
             // C# tarafında UrunID'ye göre filtrele
-            DataView view = tablo.DefaultView;
-            view.RowFilter = $"UrunID = {urunID}";
-            return view.ToTable();
+            try
+            {
+                DataView view = tablo.DefaultView;
+                view.RowFilter = $"UrunID = {urunID}";
+                return view.ToTable();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Stok verileri filtrelenirken bir hata oluştu: " + ex.Message);
+            }
         }
-        //public DataTable StokHareketListeleByUrun(int urunID)
-        //{
-        //    DataTable tablo = new DataTable();
 
-        //    using (SqlConnection baglanti = DbBaglanti.BaglantiGetir())
-        //    {
-        //        SqlCommand komut = new SqlCommand("sp_StokHareketListeleByUrun", baglanti);
-        //        komut.CommandType = CommandType.StoredProcedure;
+        /*
+        // Alternatif SP'li Versiyon (Veritabanında SP varsa bunu kullanabilirsiniz)
+        public DataTable StokHareketListeleByUrun(int urunID)
+        {
+            DataTable tablo = new DataTable();
 
-        //        komut.Parameters.AddWithValue("@UrunID", urunID);
+            using (SqlConnection baglanti = DbBaglanti.BaglantiGetir())
+            {
+                SqlCommand komut = new SqlCommand("sp_StokHareketListeleByUrun", baglanti);
+                komut.CommandType = CommandType.StoredProcedure;
 
-        //        SqlDataAdapter adapter = new SqlDataAdapter(komut);
-        //        adapter.Fill(tablo);
-        //    }
+                komut.Parameters.AddWithValue("@UrunID", urunID);
 
-        //    return tablo;
-        //}
+                try
+                {
+                    SqlDataAdapter adapter = new SqlDataAdapter(komut);
+                    adapter.Fill(tablo);
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Ürüne göre stok hareketleri listelenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
+            }
+
+            return tablo;
+        }
+        */
 
         // ── ID'YE GÖRE GETİR ─────────────────────────────────────────────
         // sp_StokHareketGetirById prosedürünü çağırır.
@@ -104,19 +145,26 @@ namespace CampStore.DataAccessLayer
 
                 komut.Parameters.AddWithValue("@StokID", stokID);
 
-                baglanti.Open();
-                SqlDataReader reader = komut.ExecuteReader();
-
-                if (reader.Read())
+                try
                 {
-                    stok = new StokHareket
+                    baglanti.Open();
+                    SqlDataReader reader = komut.ExecuteReader();
+
+                    if (reader.Read())
                     {
-                        StokID = Convert.ToInt32(reader["StokID"]),
-                        UrunID = Convert.ToInt32(reader["UrunID"]),
-                        GirisMiktar = Convert.ToInt32(reader["GirisMiktar"]),
-                        CikisMiktar = Convert.ToInt32(reader["CikisMiktar"]),
-                        Tarih = Convert.ToDateTime(reader["Tarih"])
-                    };
+                        stok = new StokHareket
+                        {
+                            StokID = Convert.ToInt32(reader["StokID"]),
+                            UrunID = Convert.ToInt32(reader["UrunID"]),
+                            GirisMiktar = Convert.ToInt32(reader["GirisMiktar"]),
+                            CikisMiktar = Convert.ToInt32(reader["CikisMiktar"]),
+                            Tarih = Convert.ToDateTime(reader["Tarih"])
+                        };
+                    }
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Stok hareket bilgisi getirilirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
                 }
             }
 

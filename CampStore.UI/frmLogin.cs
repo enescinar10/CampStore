@@ -1,15 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-
-// frmLogin.cs — Giriş Ekranı
-// Tüm kontroller kod ile oluşturulur, Designer kullanılmaz.
+﻿// frmLogin.cs — Yenilenmiş versiyon
+// TC, Kullanıcı Adı ile giriş desteği
+// Giriş tipini RadioButton ile seçer
 
 using System;
 using System.Drawing;
@@ -24,13 +15,14 @@ namespace CampStore.UI
     {
         private PersonelBL personelBL = new PersonelBL();
 
-        // ── KONTROLLER ────────────────────────────────────────────────────
         private Panel pnlArkaplan, pnlKart;
         private Label lblLogo, lblBaslik, lblAltBaslik;
-        private Label lblTC, lblSifre;
-        private TextBox txtTC, txtSifre;
+        private Label lblGirisTipi, lblGirisBilgisi, lblSifre;
+        private RadioButton rdoTC, rdoKullanici;
+        private TextBox txtGirisBilgisi, txtSifre;
         private Button btnGiris;
         private Label lblHata;
+        private CheckBox chkSifreGoster;
 
         public frmLogin()
         {
@@ -40,36 +32,41 @@ namespace CampStore.UI
 
         private void KontrolleriOlustur()
         {
-            this.Text = "CampStore — Giriş";
-            this.Size = new Size(480, 540);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            // KontrolleriOlustur'da
+            UIHelper.FormAyarla(this, "CampStore — Giriş", 500, 600);
             this.MaximizeBox = false;
-            this.BackColor = Color.FromArgb(27, 42, 59);
+            this.Resize += (s, ev) => frmLogin_Load(s, ev); // Resize'da da ortala
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
 
-            // ── ARKA PLAN PANELİ ──────────────────────────────────────────
+            // Arka plan
             pnlArkaplan = new Panel
             {
-                Size = new Size(480, 540),
+                Size = new Size(480, 580),
                 Location = new Point(0, 0),
-                BackColor = Color.FromArgb(27, 42, 59)
+                BackColor = UIHelper.RenkArkaplan
             };
             this.Controls.Add(pnlArkaplan);
 
-            // ── KART PANELİ ───────────────────────────────────────────────
+            // Üst dekoratif şerit
+            Panel pnlSerit = new Panel
+            {
+                Size = new Size(480, 6),
+                Location = new Point(0, 0),
+                BackColor = UIHelper.RenkYesil
+            };
+            pnlArkaplan.Controls.Add(pnlSerit);
+
+            // Kart paneli
             pnlKart = new Panel
             {
-                Size = new Size(360, 390),
-                Location = new Point(60, 70),
+                Size = new Size(380, 460),
+                Location = new Point(50, 55),
                 BackColor = Color.White
             };
-            pnlArkaplan.Controls.Add(pnlKart);
-
-            // Köşeleri yuvarla
             pnlKart.Paint += (s, ev) =>
             {
                 GraphicsPath yol = new GraphicsPath();
-                int r = 20;
+                int r = 16;
                 Rectangle alan = pnlKart.ClientRectangle;
                 yol.AddArc(alan.X, alan.Y, r, r, 180, 90);
                 yol.AddArc(alan.Right - r, alan.Y, r, r, 270, 90);
@@ -78,25 +75,35 @@ namespace CampStore.UI
                 yol.CloseAllFigures();
                 pnlKart.Region = new Region(yol);
             };
+            pnlArkaplan.Controls.Add(pnlKart);
 
-            // ── LOGO ──────────────────────────────────────────────────────
+            // Sol yeşil aksanı
+            Panel pnlAksan = new Panel
+            {
+                Size = new Size(4, 460),
+                Location = new Point(50, 55),
+                BackColor = UIHelper.RenkYesil
+            };
+            pnlArkaplan.Controls.Add(pnlAksan);
+
+            // Logo
             lblLogo = new Label
             {
                 Text = "🏕️",
-                Font = new Font("Segoe UI", 32f),
-                ForeColor = Color.FromArgb(27, 42, 59),
-                Location = new Point(145, 25),
+                Font = new Font("Segoe UI", 30f),
+                ForeColor = UIHelper.RenkArkaplan,
+                Location = new Point(155, 20),
                 AutoSize = true
             };
             pnlKart.Controls.Add(lblLogo);
 
-            // ── BAŞLIK ────────────────────────────────────────────────────
+            // Başlık
             lblBaslik = new Label
             {
                 Text = "CampStore",
                 Font = new Font("Segoe UI", 20f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(27, 42, 59),
-                Location = new Point(95, 85),
+                ForeColor = UIHelper.RenkArkaplan,
+                Location = new Point(100, 75),
                 AutoSize = true
             };
             pnlKart.Controls.Add(lblBaslik);
@@ -106,150 +113,264 @@ namespace CampStore.UI
                 Text = "Yönetim Paneline Giriş",
                 Font = new Font("Segoe UI", 9f),
                 ForeColor = Color.Gray,
-                Location = new Point(100, 120),
+                Location = new Point(108, 110),
                 AutoSize = true
             };
             pnlKart.Controls.Add(lblAltBaslik);
 
-            // ── TC KİMLİK ─────────────────────────────────────────────────
-            lblTC = new Label
+            // Ayraç çizgisi
+            Panel pnlCizgi = new Panel
+            {
+                Size = new Size(320, 1),
+                Location = new Point(30, 138),
+                BackColor = Color.FromArgb(220, 220, 220)
+            };
+            pnlKart.Controls.Add(pnlCizgi);
+
+            // ── GİRİŞ TİPİ SEÇİMİ ────────────────────────────────────────
+            lblGirisTipi = new Label
+            {
+                Text = "Giriş Tipi",
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = UIHelper.RenkArkaplan,
+                Location = new Point(30, 155),
+                AutoSize = true
+            };
+            pnlKart.Controls.Add(lblGirisTipi);
+
+            // RadioButton container
+            Panel pnlRadio = new Panel
+            {
+                Size = new Size(320, 35),
+                Location = new Point(30, 175),
+                BackColor = Color.FromArgb(245, 247, 250)
+            };
+            pnlKart.Controls.Add(pnlRadio);
+
+            rdoTC = new RadioButton
+            {
+                Text = "🪪 TC Kimlik",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = UIHelper.RenkArkaplan,
+                Location = new Point(10, 8),
+                Checked = true,
+                AutoSize = true
+            };
+            rdoTC.CheckedChanged += GirisTipiDegisti;
+            pnlRadio.Controls.Add(rdoTC);
+
+            rdoKullanici = new RadioButton
+            {
+                Text = "👤 Kullanıcı Adı",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = UIHelper.RenkArkaplan,
+                Location = new Point(140, 8),
+                AutoSize = true
+            };
+            rdoKullanici.CheckedChanged += GirisTipiDegisti;
+            pnlRadio.Controls.Add(rdoKullanici);
+
+            // ── GİRİŞ BİLGİSİ ────────────────────────────────────────────
+            lblGirisBilgisi = new Label
             {
                 Text = "TC Kimlik No",
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(27, 42, 59),
-                Location = new Point(30, 158),
+                ForeColor = UIHelper.RenkArkaplan,
+                Location = new Point(30, 223),
                 AutoSize = true
             };
-            pnlKart.Controls.Add(lblTC);
+            pnlKart.Controls.Add(lblGirisBilgisi);
 
-            txtTC = new TextBox
+            txtGirisBilgisi = new TextBox
             {
-                Size = new Size(300, 35),
-                Location = new Point(30, 178),
+                Size = new Size(320, 35),
+                Location = new Point(30, 243),
                 Font = new Font("Segoe UI", 11f),
                 BorderStyle = BorderStyle.FixedSingle,
                 MaxLength = 11,
-                BackColor = Color.FromArgb(245, 245, 245)
+                BackColor = Color.FromArgb(245, 247, 250)
             };
-            // Sadece rakam girilsin
-            txtTC.KeyPress += (s, ev) =>
-            {
-                if (!char.IsDigit(ev.KeyChar) && ev.KeyChar != (char)Keys.Back)
-                    ev.Handled = true;
-            };
-            pnlKart.Controls.Add(txtTC);
+            txtGirisBilgisi.KeyPress += GirisBilgisiKeyPress;
+            pnlKart.Controls.Add(txtGirisBilgisi);
 
             // ── ŞİFRE ─────────────────────────────────────────────────────
             lblSifre = new Label
             {
                 Text = "Şifre",
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(27, 42, 59),
-                Location = new Point(30, 225),
+                ForeColor = UIHelper.RenkArkaplan,
+                Location = new Point(30, 292),
                 AutoSize = true
             };
             pnlKart.Controls.Add(lblSifre);
 
             txtSifre = new TextBox
             {
-                Size = new Size(300, 35),
-                Location = new Point(30, 245),
+                Size = new Size(320, 35),
+                Location = new Point(30, 312),
                 Font = new Font("Segoe UI", 11f),
                 BorderStyle = BorderStyle.FixedSingle,
                 PasswordChar = '●',
-                BackColor = Color.FromArgb(245, 245, 245)
+                BackColor = Color.FromArgb(245, 247, 250)
             };
             pnlKart.Controls.Add(txtSifre);
+
+            // Şifreyi göster checkbox
+            chkSifreGoster = new CheckBox
+            {
+                Text = "Şifreyi Göster",
+                Font = new Font("Segoe UI", 8f),
+                ForeColor = Color.Gray,
+                Location = new Point(30, 352),
+                AutoSize = true
+            };
+            chkSifreGoster.CheckedChanged += (s, ev) =>
+                txtSifre.PasswordChar = chkSifreGoster.Checked ? '\0' : '●';
+            pnlKart.Controls.Add(chkSifreGoster);
 
             // ── HATA MESAJI ───────────────────────────────────────────────
             lblHata = new Label
             {
                 Text = "",
                 Font = new Font("Segoe UI", 8f),
-                ForeColor = Color.FromArgb(231, 76, 60),
-                Location = new Point(30, 288),
-                Size = new Size(300, 20),
+                ForeColor = UIHelper.RenkKirmizi,
+                Location = new Point(30, 375),
+                Size = new Size(320, 18),
                 TextAlign = ContentAlignment.MiddleCenter
             };
             pnlKart.Controls.Add(lblHata);
 
             // ── GİRİŞ BUTONU ──────────────────────────────────────────────
-            btnGiris = new Button
-            {
-                Text = "Giriş Yap",
-                Size = new Size(300, 45),
-                Location = new Point(30, 315),
-                BackColor = Color.FromArgb(46, 204, 113),
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand
-            };
-            btnGiris.FlatAppearance.BorderSize = 0;
+            btnGiris = UIHelper.BtnOlustur("Giriş Yap",
+                UIHelper.RenkYesil, 30, 398, 320, 45);
+            btnGiris.Font = new Font("Segoe UI", 11f, FontStyle.Bold);
             btnGiris.Click += btnGiris_Click;
-            btnGiris.MouseEnter += (s, ev) =>
-                btnGiris.BackColor = Color.FromArgb(39, 174, 96);
-            btnGiris.MouseLeave += (s, ev) =>
-                btnGiris.BackColor = Color.FromArgb(46, 204, 113);
             pnlKart.Controls.Add(btnGiris);
 
-            // ── ALT BİLGİ ─────────────────────────────────────────────────
+            // Alt bilgi
             new Label
             {
                 Text = "© 2026 CampStore — Kamp Malzemeleri",
                 Font = new Font("Segoe UI", 8f),
                 ForeColor = Color.FromArgb(100, 120, 140),
-                Location = new Point(90, 480),
+                Location = new Point(95, 530),
                 AutoSize = true,
                 Parent = pnlArkaplan
             };
 
-            // Enter tuşuyla giriş yapılsın
             this.AcceptButton = btnGiris;
-
             this.Load += frmLogin_Load;
         }
 
-        // ── FORM YÜKLENINCE ───────────────────────────────────────────────
         private void frmLogin_Load(object sender, EventArgs e)
         {
-            txtTC.Focus();
+            // Kart her zaman ortada olsun
+            pnlKart.Location = new Point(
+                (this.ClientSize.Width - pnlKart.Width) / 2,
+                (this.ClientSize.Height - pnlKart.Height) / 2 - 20
+            );
+
+            // Sol aksan çizgisini da güncelle
+            foreach (Control ctrl in pnlArkaplan.Controls)
+            {
+                if (ctrl is Panel p && p.Width == 4)
+                {
+                    p.Location = new Point(pnlKart.Location.X, pnlKart.Location.Y);
+                    p.Height = pnlKart.Height;
+                }
+            }
+            txtGirisBilgisi.Focus();
         }
 
-        // ── GİRİŞ YAP BUTONU ─────────────────────────────────────────────
+        // ── GİRİŞ TİPİ DEĞİŞTİ ───────────────────────────────────────────
+        private void GirisTipiDegisti(object sender, EventArgs e)
+        {
+            if (rdoTC.Checked)
+            {
+                lblGirisBilgisi.Text = "TC Kimlik No";
+                txtGirisBilgisi.MaxLength = 11;
+            }
+            else
+            {
+                lblGirisBilgisi.Text = "Kullanıcı Adı";
+                txtGirisBilgisi.MaxLength = 50;
+            }
+
+            txtGirisBilgisi.Clear();
+            lblHata.Text = "";
+            txtGirisBilgisi.Focus();
+        }
+
+        // ── GİRİŞ BİLGİSİ KEY PRESS ──────────────────────────────────────
+        private void GirisBilgisiKeyPress(object sender, KeyPressEventArgs e)
+        {
+            // TC modunda sadece rakam
+            if (rdoTC.Checked)
+            {
+                if (!char.IsDigit(e.KeyChar) && e.KeyChar != (char)Keys.Back)
+                    e.Handled = true;
+            }
+        }
+
+        // ── GİRİŞ YAP ─────────────────────────────────────────────────────
         private void btnGiris_Click(object sender, EventArgs e)
         {
-            // Hata mesajını temizle
             lblHata.Text = "";
             btnGiris.Enabled = false;
             btnGiris.Text = "Kontrol ediliyor...";
 
-            string mesaj;
-            Personel personel = personelBL.LoginKontrol(
-                txtTC.Text.Trim(),
-                txtSifre.Text,
-                out mesaj
-            );
-
-            if (mesaj == "OK" && personel != null)
+            try
             {
-                // Oturumu kaydet
-                OturumBilgisi.AktifPersonel = personel;
+                // API'ye login isteği gönder
+                var loginData = new
+                {
+                    girisBilgisi = txtGirisBilgisi.Text.Trim(),
+                    sifre = txtSifre.Text
+                };
 
-                // Ana sayfayı aç
-                frmAnaSayfa anaForm = new frmAnaSayfa();
-                anaForm.Show();
+                dynamic sonuc = ApiServis.Post<dynamic>("auth/login", loginData);
 
-                // Login formunu gizle
-                this.Hide();
+                if (sonuc != null && (bool)sonuc.basarili)
+                {
+                    // Personel bilgisini OturumBilgisi'ne kaydet
+                    OturumBilgisi.AktifPersonel = new Entities.Personel
+                    {
+                        PerID = (int)sonuc.personel.perID,
+                        PerAd = (string)sonuc.personel.perAd,
+                        PerSoyad = (string)sonuc.personel.perSoyad,
+                        RolID = (int)sonuc.personel.rolID,
+                        RolAdi = (string)sonuc.personel.rolAdi,
+                        TC = (string)sonuc.personel.tc
+                    };
+
+                    // Log kaydı API'ye gönder
+                    try
+                    {
+                        ApiServis.Post<dynamic>("log", new
+                        {
+                            islemTuru = "GİRİŞ",
+                            aciklama = $"{OturumBilgisi.AktifPersonel.PerAd} " +
+                                        $"{OturumBilgisi.AktifPersonel.PerSoyad} giriş yaptı."
+                        });
+                    }
+                    catch { }
+
+                    frmAnaSayfa anaForm = new frmAnaSayfa();
+                    anaForm.Show();
+                    this.Hide();
+                }
+                else
+                {
+                    lblHata.Text = sonuc?.mesaj ?? "Giriş başarısız!";
+                    txtSifre.Clear();
+                    txtSifre.Focus();
+                    btnGiris.Enabled = true;
+                    btnGiris.Text = "Giriş Yap";
+                }
             }
-            else
+            catch (Exception ex)
             {
-                // Hata mesajını göster
-                lblHata.Text = mesaj;
-                txtSifre.Clear();
-                txtSifre.Focus();
-
+                lblHata.Text = "API bağlantı hatası: " + ex.Message;
                 btnGiris.Enabled = true;
                 btnGiris.Text = "Giriş Yap";
             }

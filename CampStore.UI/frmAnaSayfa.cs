@@ -35,7 +35,13 @@ namespace CampStore.UI
             InitializeComponent();
             // Kontroller oluştuktan hemen sonra dashboard'ı yükle
             this.Shown += frmAnaSayfa_Shown;
+             //Maximize ekle
+            //this.WindowState = FormWindowState.Maximized;
+            //this.MaximizeBox = false;
+            //this.FormBorderStyle = FormBorderStyle.Sizable;
+            //KontrolleriOlustur();
         }
+
 
         // ── FORM YÜKLENINCE ───────────────────────────────────────────────
         private void frmAnaSayfa_Load(object sender, EventArgs e)
@@ -55,9 +61,10 @@ namespace CampStore.UI
                 lblTarihSaat.Text = DateTime.Now.ToString("dd.MM.yyyy — HH:mm:ss");
             };
             saatTimer.Start();
+            dgvSonSatislar.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
 
-           
-           
+
+
         }
 
         // ── DASHBOARD SAYILARINI YÜKLE ────────────────────────────────────
@@ -65,34 +72,18 @@ namespace CampStore.UI
         {
             try
             {
-                DataTable dtUrun = urunBL.UrunListele();
-                DataTable dtMusteri = musteriBL.MusteriListele();
-                DataTable dtSatis = satisBL.SatisListele();
-                DataTable dtPersonel = personelBL.PersonelListele();
+                dynamic urunler = ApiServis.Get<dynamic>("urun");
+                dynamic musteriler = ApiServis.Get<dynamic>("musteri");
+                dynamic satislar = ApiServis.Get<dynamic>("satis");
+                dynamic personeller = ApiServis.Get<dynamic>("personel");
 
-                lblUrunSayisi.Text = dtUrun.Rows.Count.ToString();
-                lblMusteriSayisi.Text = dtMusteri.Rows.Count.ToString();
-                lblSatisSayisi.Text = dtSatis.Rows.Count.ToString();
-                lblPersonelSayisi.Text = dtPersonel.Rows.Count.ToString();
+                // Satır sayısını hesapla
+                lblUrunSayisi.Text = ((Newtonsoft.Json.Linq.JArray)urunler).Count.ToString();
+                lblMusteriSayisi.Text = ((Newtonsoft.Json.Linq.JArray)musteriler).Count.ToString();
+                lblSatisSayisi.Text = ((Newtonsoft.Json.Linq.JArray)satislar).Count.ToString();
+                lblPersonelSayisi.Text = ((Newtonsoft.Json.Linq.JArray)personeller).Count.ToString();
 
-                // Kritik stok kontrolü
-                int kritikStok = 0;
-                foreach (DataRow row in dtUrun.Rows)
-                {
-                    if (Convert.ToInt32(row["Stok"]) <= 5)
-                        kritikStok++;
-                }
 
-                // Kritik stok varsa uyarı göster
-                if (kritikStok > 0)
-                {
-                    MessageBox.Show(
-                        $"⚠️ {kritikStok} ürünün stoğu kritik seviyede (5 ve altı)!\n" +
-                        "Lütfen stok takibi sayfasını kontrol edin.",
-                        "Stok Uyarısı",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                }
             }
             catch (Exception ex)
             {
@@ -100,6 +91,46 @@ namespace CampStore.UI
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        //private void DashboardYukle()
+        //{
+        //    try
+        //    {
+        //        DataTable dtUrun = urunBL.UrunListele();
+        //        DataTable dtMusteri = musteriBL.MusteriListele();
+        //        DataTable dtSatis = satisBL.SatisListele();
+        //        DataTable dtPersonel = personelBL.PersonelListele();
+
+        //        lblUrunSayisi.Text = dtUrun.Rows.Count.ToString();
+        //        lblMusteriSayisi.Text = dtMusteri.Rows.Count.ToString();
+        //        lblSatisSayisi.Text = dtSatis.Rows.Count.ToString();
+        //        lblPersonelSayisi.Text = dtPersonel.Rows.Count.ToString();
+
+        //        // Kritik stok kontrolü
+        //        int kritikStok = 0;
+        //        foreach (DataRow row in dtUrun.Rows)
+        //        {
+        //            if (Convert.ToInt32(row["Stok"]) <= 5)
+        //                kritikStok++;
+        //        }
+
+        //        // Kritik stok varsa uyarı göster
+        //        if (kritikStok > 0)
+        //        {
+        //            MessageBox.Show(
+        //                $"⚠️ {kritikStok} ürünün stoğu kritik seviyede (5 ve altı)!\n" +
+        //                "Lütfen stok takibi sayfasını kontrol edin.",
+        //                "Stok Uyarısı",
+        //                MessageBoxButtons.OK,
+        //                MessageBoxIcon.Warning);
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MessageBox.Show("Dashboard yüklenirken hata: " + ex.Message,
+        //            "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        //    }
+        //}
 
         // ── SON SATIŞLARI YÜKLE ───────────────────────────────────────────
         private void SonSatislarYukle()
@@ -252,6 +283,76 @@ namespace CampStore.UI
             DashboardYukle();
             SonSatislarYukle();
             DgvAyarla();
+            RoleGoreMenuAyarla(); // ← Ekle
+        }
+        /*private void KontrolleriOlustur()
+        {
+            // ... pnlMenu, pnlUstBar, pnlIcerik ve renkli kartlarını oluşturduğun kodlar ...
+
+            // 1. Kartlarını bir diziye koy (kendi panel isimlerini yaz)
+            Control[] dashboardKartlari = { pnlKartUrun, pnlKartMusteri, pnlKartSatis, pnlKartPersonel};
+
+            // 2. Yeniden boyutlandırma işlemini bir Action olarak tanımla
+            Action yenidenHizala = () =>
+            {
+                // pnlIcerik genişliğine göre kartları 25px aralıkla diz
+                UIHelper.DashboardKartlariHizala(pnlIcerik, dashboardKartlari, 25);
+            };
+
+            // 3. İlk açılışta kartları yerleştir
+            yenidenHizala();
+
+            // 4. Form maximize olduğunda veya mouse ile kenarlarından çekildiğinde tekrar tetikle
+            pnlIcerik.Resize += (s, e) => yenidenHizala();
+        }*/
+
+        // ── ROLE GÖRE MENÜ AYARLA ─────────────────────────────────────────
+        private void RoleGoreMenuAyarla()
+        {
+            string rol = OturumBilgisi.AktifPersonel.RolAdi;
+
+            switch (rol)
+            {
+                case "Yönetici":
+                    // Tüm menüler açık — hiçbir şey gizlenmiyor
+                    break;
+
+                case "Kasiyer":
+                    // Sadece Satış, Fatura, Müşteri görebilir
+                    btnUrun.Visible = false;
+                    btnKategori.Visible = false;
+                    btnPersonel.Visible = false;
+                    btnStok.Visible = false;
+                    btnLog.Visible = false;
+                    break;
+
+                case "Depo":
+                    // Sadece Ürün, Stok görebilir
+                    btnMusteri.Visible = false;
+                    btnPersonel.Visible = false;
+                    btnSatis.Visible = false;
+                    btnFatura.Visible = false;
+                    btnLog.Visible = false;
+                    break;
+
+                default:
+                    // Bilinmeyen rol — sadece ana sayfa
+                    btnUrun.Visible = false;
+                    btnKategori.Visible = false;
+                    btnMusteri.Visible = false;
+                    btnPersonel.Visible = false;
+                    btnSatis.Visible = false;
+                    btnFatura.Visible = false;
+                    btnStok.Visible = false;
+                    btnLog.Visible = false;
+                    break;
+            }
+
+            // Üst barda rol bilgisini göster
+            lblHosgeldin.Text = $"Hoş geldiniz, " +
+                $"{OturumBilgisi.AktifPersonel.PerAd} " +
+                $"{OturumBilgisi.AktifPersonel.PerSoyad} " +
+                $"— {OturumBilgisi.AktifPersonel.RolAdi}";
         }
         // ── KRİTİK STOK UYARI TABLOSU ─────────────────────────────────────
         private void KritikStoklariYukle()

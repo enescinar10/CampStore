@@ -3,11 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
 // UrunDAL.cs — Veri Katmanı
 // Urun tablosuna ait tüm veritabanı işlemleri stored procedure ile yapılır.
-
-using System;
 using System.Data;
 using System.Data.SqlClient;
 using CampStore.Entities;
@@ -22,7 +19,8 @@ namespace CampStore.DataAccessLayer
         {
             using (SqlConnection baglanti = DbBaglanti.BaglantiGetir())
             {
-                SqlCommand komut = new SqlCommand("sp_UrunEkle", baglanti);
+                // 1. Prosedür adını yeni transaction'lı prosedürünle değiştirdik
+                SqlCommand komut = new SqlCommand("sp_UrunEkle_Guvenli", baglanti);
                 komut.CommandType = CommandType.StoredProcedure;
 
                 komut.Parameters.AddWithValue("@KatID", u.KatID);
@@ -32,8 +30,18 @@ namespace CampStore.DataAccessLayer
                 komut.Parameters.AddWithValue("@Durum", u.Durum);
                 komut.Parameters.AddWithValue("@Aciklama", u.Aciklama);
 
-                baglanti.Open();
-                komut.ExecuteNonQuery();
+                // 2. Olası ROLLBACK hatalarını yakalamak için Try-Catch ekledik
+                try
+                {
+                    baglanti.Open();
+                    komut.ExecuteNonQuery();
+                }
+                catch (SqlException ex)
+                {
+                    // Eğer SQL tarafında hata çıkar ve işlem geri alınırsa uygulama çökmez,
+                    // hata mesajını üst katmana (forma) düzgün bir şekilde fırlatırız.
+                    throw new Exception("Ürün eklenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
         }
 
@@ -43,7 +51,8 @@ namespace CampStore.DataAccessLayer
         {
             using (SqlConnection baglanti = DbBaglanti.BaglantiGetir())
             {
-                SqlCommand komut = new SqlCommand("sp_UrunGuncelle", baglanti);
+                // 1. Prosedür adı transaction'lı olanla değiştirildi
+                SqlCommand komut = new SqlCommand("sp_UrunGuncelle_Guvenli", baglanti);
                 komut.CommandType = CommandType.StoredProcedure;
 
                 komut.Parameters.AddWithValue("@UrunID", u.UrunID);
@@ -54,24 +63,43 @@ namespace CampStore.DataAccessLayer
                 komut.Parameters.AddWithValue("@Durum", u.Durum);
                 komut.Parameters.AddWithValue("@Aciklama", u.Aciklama);
 
-                baglanti.Open();
-                komut.ExecuteNonQuery();
+                // 2. Olası ROLLBACK hatalarını yakalamak için Try-Catch eklendi
+                try
+                {
+                    baglanti.Open();
+                    komut.ExecuteNonQuery();
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Ürün güncellenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
         }
 
         // ── SİL ──────────────────────────────────────────────────────────
         // sp_UrunSil prosedürünü çağırır.
+        // ── SİL ──────────────────────────────────────────────────────────
+        // spUrunSil_Guvenli prosedürünü çağırır.
         public void UrunSil(int urunID)
         {
             using (SqlConnection baglanti = DbBaglanti.BaglantiGetir())
             {
-                SqlCommand komut = new SqlCommand("sp_UrunSil", baglanti);
+                // 1. Prosedür adı transaction'lı olanla değiştirildi
+                SqlCommand komut = new SqlCommand("sp_UrunSil_Guvenli", baglanti);
                 komut.CommandType = CommandType.StoredProcedure;
 
                 komut.Parameters.AddWithValue("@UrunID", urunID);
 
-                baglanti.Open();
-                komut.ExecuteNonQuery();
+                // 2. Olası ROLLBACK hatalarını yakalamak için Try-Catch eklendi
+                try
+                {
+                    baglanti.Open();
+                    komut.ExecuteNonQuery();
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Ürün silinirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
         }
 

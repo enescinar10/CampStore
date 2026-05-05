@@ -34,6 +34,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.7.2\System.dll</HintPath>
     </Reference>
@@ -49,6 +52,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ApiServis.cs" />
     <Compile Include="frmAnaSayfa.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -66,6 +70,12 @@
     </Compile>
     <Compile Include="frmKategori.Designer.cs">
       <DependentUpon>frmKategori.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmKategoriDetay.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmKategoriDetay.Designer.cs">
+      <DependentUpon>frmKategoriDetay.cs</DependentUpon>
     </Compile>
     <Compile Include="frmLog.cs">
       <SubType>Form</SubType>
@@ -85,11 +95,23 @@
     <Compile Include="frmMusteri.Designer.cs">
       <DependentUpon>frmMusteri.cs</DependentUpon>
     </Compile>
+    <Compile Include="frmMusteriDetay.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmMusteriDetay.Designer.cs">
+      <DependentUpon>frmMusteriDetay.cs</DependentUpon>
+    </Compile>
     <Compile Include="frmPersonel.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="frmPersonel.Designer.cs">
       <DependentUpon>frmPersonel.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmPersonelDetay.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmPersonelDetay.Designer.cs">
+      <DependentUpon>frmPersonelDetay.cs</DependentUpon>
     </Compile>
     <Compile Include="frmSatis.cs">
       <SubType>Form</SubType>
@@ -109,9 +131,16 @@
     <Compile Include="frmUrun.Designer.cs">
       <DependentUpon>frmUrun.cs</DependentUpon>
     </Compile>
+    <Compile Include="frmUrunDetay.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmUrunDetay.Designer.cs">
+      <DependentUpon>frmUrunDetay.cs</DependentUpon>
+    </Compile>
     <Compile Include="OturumBilgisi.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="UIHelper.cs" />
     <EmbeddedResource Include="frmAnaSayfa.resx">
       <DependentUpon>frmAnaSayfa.cs</DependentUpon>
     </EmbeddedResource>
@@ -124,6 +153,7 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>

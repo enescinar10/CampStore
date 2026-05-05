@@ -3,14 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
-// KategoriDAL.cs — Veri Katmanı
-// Kategori tablosuna ait tüm veritabanı işlemleri stored procedure ile yapılır.
-
 using System.Data;
 using System.Data.SqlClient;
 using CampStore.Entities;
 
+// KategoriDAL.cs — Veri Katmanı
+// Kategori tablosuna ait tüm veritabanı işlemleri stored procedure ile yapılır.
 namespace CampStore.DataAccessLayer
 {
     public class KategoriDAL
@@ -29,8 +27,15 @@ namespace CampStore.DataAccessLayer
                 komut.Parameters.AddWithValue("@UstKategoriID",
                     k.UstKategoriID.HasValue ? (object)k.UstKategoriID.Value : DBNull.Value);
 
-                baglanti.Open();
-                komut.ExecuteNonQuery();
+                try
+                {
+                    baglanti.Open();
+                    komut.ExecuteNonQuery();
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Kategori eklenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
         }
 
@@ -48,8 +53,15 @@ namespace CampStore.DataAccessLayer
                 komut.Parameters.AddWithValue("@UstKategoriID",
                     k.UstKategoriID.HasValue ? (object)k.UstKategoriID.Value : DBNull.Value);
 
-                baglanti.Open();
-                komut.ExecuteNonQuery();
+                try
+                {
+                    baglanti.Open();
+                    komut.ExecuteNonQuery();
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Kategori güncellenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
         }
 
@@ -64,8 +76,15 @@ namespace CampStore.DataAccessLayer
 
                 komut.Parameters.AddWithValue("@KatID", katID);
 
-                baglanti.Open();
-                komut.ExecuteNonQuery();
+                try
+                {
+                    baglanti.Open();
+                    komut.ExecuteNonQuery();
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Kategori silinirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
         }
 
@@ -81,8 +100,15 @@ namespace CampStore.DataAccessLayer
                 SqlCommand komut = new SqlCommand("sp_KategoriListele", baglanti);
                 komut.CommandType = CommandType.StoredProcedure;
 
-                SqlDataAdapter adapter = new SqlDataAdapter(komut);
-                adapter.Fill(tablo);
+                try
+                {
+                    SqlDataAdapter adapter = new SqlDataAdapter(komut);
+                    adapter.Fill(tablo); // Fill metodu bağlantıyı kendisi açıp kapatır.
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Kategoriler listelenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
 
             return tablo;
@@ -102,20 +128,27 @@ namespace CampStore.DataAccessLayer
 
                 komut.Parameters.AddWithValue("@KatID", katID);
 
-                baglanti.Open();
-                SqlDataReader reader = komut.ExecuteReader();
-
-                if (reader.Read())
+                try
                 {
-                    kategori = new Kategori
+                    baglanti.Open();
+                    SqlDataReader reader = komut.ExecuteReader();
+
+                    if (reader.Read())
                     {
-                        KatID = (int)reader["KatID"],
-                        KatAdi = reader["KatAdi"].ToString(),
-                        // DBNull kontrolü: üst kategori yoksa null ata
-                        UstKategoriID = reader["UstKategoriID"] == DBNull.Value
-                                        ? (int?)null
-                                        : (int)reader["UstKategoriID"]
-                    };
+                        kategori = new Kategori
+                        {
+                            KatID = (int)reader["KatID"],
+                            KatAdi = reader["KatAdi"].ToString(),
+                            // DBNull kontrolü: üst kategori yoksa null ata
+                            UstKategoriID = reader["UstKategoriID"] == DBNull.Value
+                                            ? (int?)null
+                                            : (int)reader["UstKategoriID"]
+                        };
+                    }
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Kategori bilgisi getirilirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
                 }
             }
 

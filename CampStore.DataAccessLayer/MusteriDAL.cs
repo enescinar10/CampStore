@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
-// MusteriDAL.cs — Veri Katmanı
-// Musteri tablosuna ait tüm veritabanı işlemleri stored procedure ile yapılır.
 using System.Data;
 using System.Data.SqlClient;
 using CampStore.Entities;
 
+// MusteriDAL.cs — Veri Katmanı
+// Musteri tablosuna ait tüm veritabanı işlemleri stored procedure ile yapılır.
 namespace CampStore.DataAccessLayer
 {
     public class MusteriDAL
@@ -33,8 +32,15 @@ namespace CampStore.DataAccessLayer
                 komut.Parameters.AddWithValue("@IlceID", m.IlceID);
                 komut.Parameters.AddWithValue("@Durum", m.Durum);
 
-                baglanti.Open();
-                komut.ExecuteNonQuery();
+                try
+                {
+                    baglanti.Open();
+                    komut.ExecuteNonQuery();
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Müşteri eklenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
         }
 
@@ -58,8 +64,15 @@ namespace CampStore.DataAccessLayer
                 komut.Parameters.AddWithValue("@IlceID", m.IlceID);
                 komut.Parameters.AddWithValue("@Durum", m.Durum);
 
-                baglanti.Open();
-                komut.ExecuteNonQuery();
+                try
+                {
+                    baglanti.Open();
+                    komut.ExecuteNonQuery();
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Müşteri güncellenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
         }
 
@@ -83,8 +96,7 @@ namespace CampStore.DataAccessLayer
                     int satisSayisi = Convert.ToInt32(kontrol.ExecuteScalar());
 
                     if (satisSayisi > 0)
-                        throw new Exception(
-                            $"Bu müşteriye ait {satisSayisi} satış kaydı var, silinemez!");
+                        throw new Exception($"Bu müşteriye ait {satisSayisi} satış kaydı var, silinemez!");
 
                     // 2. Müşteri profilini sil
                     SqlCommand profilSil = new SqlCommand(
@@ -101,10 +113,17 @@ namespace CampStore.DataAccessLayer
 
                     transaction.Commit();
                 }
-                catch
+                catch (Exception ex)
                 {
+                    // Hata durumunda işlemi geri alıyoruz
                     transaction.Rollback();
-                    throw;
+
+                    // Eğer hata SQL'den geliyorsa (örneğin kısıtlama hatası)
+                    if (ex is SqlException)
+                        throw new Exception("Müşteri silinirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+
+                    // Kendi fırlattığımız "satış kaydı var" gibi hatalar için
+                    throw new Exception(ex.Message);
                 }
             }
         }
@@ -121,8 +140,15 @@ namespace CampStore.DataAccessLayer
                 SqlCommand komut = new SqlCommand("sp_MusteriListele", baglanti);
                 komut.CommandType = CommandType.StoredProcedure;
 
-                SqlDataAdapter adapter = new SqlDataAdapter(komut);
-                adapter.Fill(tablo);
+                try
+                {
+                    SqlDataAdapter adapter = new SqlDataAdapter(komut);
+                    adapter.Fill(tablo); // Fill metodu bağlantıyı kendisi açıp kapatır
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Müşteriler listelenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
 
             return tablo;
@@ -142,24 +168,31 @@ namespace CampStore.DataAccessLayer
 
                 komut.Parameters.AddWithValue("@MusteriID", musteriID);
 
-                baglanti.Open();
-                SqlDataReader reader = komut.ExecuteReader();
-
-                if (reader.Read())
+                try
                 {
-                    musteri = new Musteri
+                    baglanti.Open();
+                    SqlDataReader reader = komut.ExecuteReader();
+
+                    if (reader.Read())
                     {
-                        MusteriID = Convert.ToInt32(reader["MusteriID"]),
-                        Ad = reader["Ad"].ToString(),
-                        Soyad = reader["Soyad"].ToString(),
-                        Email = reader["Email"].ToString(),
-                        Sifre = reader["Sifre"].ToString(),
-                        Telefon = reader["Telefon"].ToString(),
-                        Adres = reader["Adres"].ToString(),
-                        SehirID = Convert.ToInt32(reader["SehirID"]),
-                        IlceID = Convert.ToInt32(reader["IlceID"]),
-                        Durum = Convert.ToBoolean(reader["Durum"])
-                    };
+                        musteri = new Musteri
+                        {
+                            MusteriID = Convert.ToInt32(reader["MusteriID"]),
+                            Ad = reader["Ad"].ToString(),
+                            Soyad = reader["Soyad"].ToString(),
+                            Email = reader["Email"].ToString(),
+                            Sifre = reader["Sifre"].ToString(),
+                            Telefon = reader["Telefon"].ToString(),
+                            Adres = reader["Adres"].ToString(),
+                            SehirID = Convert.ToInt32(reader["SehirID"]),
+                            IlceID = Convert.ToInt32(reader["IlceID"]),
+                            Durum = Convert.ToBoolean(reader["Durum"])
+                        };
+                    }
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Müşteri bilgisi getirilirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
                 }
             }
 
@@ -178,8 +211,15 @@ namespace CampStore.DataAccessLayer
                 SqlCommand komut = new SqlCommand("sp_SehirListele", baglanti);
                 komut.CommandType = CommandType.StoredProcedure;
 
-                SqlDataAdapter adapter = new SqlDataAdapter(komut);
-                adapter.Fill(tablo);
+                try
+                {
+                    SqlDataAdapter adapter = new SqlDataAdapter(komut);
+                    adapter.Fill(tablo);
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Şehirler listelenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
 
             return tablo;
@@ -199,8 +239,15 @@ namespace CampStore.DataAccessLayer
 
                 komut.Parameters.AddWithValue("@SehirID", sehirID);
 
-                SqlDataAdapter adapter = new SqlDataAdapter(komut);
-                adapter.Fill(tablo);
+                try
+                {
+                    SqlDataAdapter adapter = new SqlDataAdapter(komut);
+                    adapter.Fill(tablo);
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("İlçeler listelenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
 
             return tablo;

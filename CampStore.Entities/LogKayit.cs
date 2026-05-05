@@ -8,6 +8,7 @@ namespace CampStore.Entities
 {
     public class LogKayit
     {
+        
         public int LogID { get; set; }
         public string IslemTuru { get; set; }
         public string Aciklama { get; set; }

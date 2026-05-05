@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-// LogDAL.cs — Veri Katmanı
-// LogKayit tablosuna ait tüm işlemler stored procedure ile yapılır.
-// Sistemdeki önemli işlemler otomatik olarak loglanır.
 using System.Data;
 using System.Data.SqlClient;
 using CampStore.Entities;
 
+// LogDAL.cs — Veri Katmanı
+// LogKayit tablosuna ait tüm işlemler stored procedure ile yapılır.
+// Sistemdeki önemli işlemler otomatik olarak loglanır.
 namespace CampStore.DataAccessLayer
 {
     public class LogDAL
@@ -28,8 +28,15 @@ namespace CampStore.DataAccessLayer
                 komut.Parameters.AddWithValue("@Aciklama", log.Aciklama);
                 komut.Parameters.AddWithValue("@Tarih", log.Tarih);
 
-                baglanti.Open();
-                komut.ExecuteNonQuery();
+                try
+                {
+                    baglanti.Open();
+                    komut.ExecuteNonQuery();
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Log eklenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
         }
 
@@ -45,8 +52,15 @@ namespace CampStore.DataAccessLayer
                 SqlCommand komut = new SqlCommand("sp_LogListele", baglanti);
                 komut.CommandType = CommandType.StoredProcedure;
 
-                SqlDataAdapter adapter = new SqlDataAdapter(komut);
-                adapter.Fill(tablo);
+                try
+                {
+                    SqlDataAdapter adapter = new SqlDataAdapter(komut);
+                    adapter.Fill(tablo); // Fill metodu bağlantıyı kendisi açıp kapatır.
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Log kayıtları listelenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
 
             return tablo;

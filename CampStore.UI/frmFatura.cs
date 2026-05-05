@@ -1,15 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Drawing.Printing;
 using System.Windows.Forms;
-// frmFatura.cs — Fatura Yönetimi Formu
-// Fatura ekleme, güncelleme, silme ve listeleme işlemleri burada yapılır.
-// Satış seçilince fatura bilgileri otomatik dolar.
 using CampStore.BusinessLayer;
 using CampStore.Entities;
 
@@ -17,21 +10,18 @@ namespace CampStore.UI
 {
     public partial class frmFatura : Form
     {
-        // Diğer buton değişkenlerinin yanına ekle
-        private Button btnYazdir;
         private FaturaBL faturaBL = new FaturaBL();
         private SatisBL satisBL = new SatisBL();
 
         private int seciliFaturaID = 0;
 
-        // ── KONTROLLER ────────────────────────────────────────────────────
         private Panel pnlBaslik, pnlForm, pnlGrid;
-        private Label lblBaslik, lblSatis, lblFaturaNo, lblTarih, lblTutar;
         private ComboBox cmbSatis;
         private TextBox txtFaturaNo, txtTutar;
         private DateTimePicker dtpTarih;
-        private Button btnEkle, btnGuncelle, btnSil, btnTemizle, btnOtomatikNo;
+        private Button btnEkle, btnGuncelle, btnSil, btnTemizle, btnYazdir;
         private DataGridView dgvFatura;
+        private Label lblToplamFatura;
 
         public frmFatura()
         {
@@ -41,84 +31,25 @@ namespace CampStore.UI
 
         private void KontrolleriOlustur()
         {
-            this.Text = "Fatura Yönetimi";
-            this.Size = new Size(1000, 620);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = Color.FromArgb(27, 42, 59);
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false;
+            UIHelper.FormAyarla(this, "Fatura Yönetimi", 1000, 640);
+            this.MaximizeBox = true;
+            this.FormBorderStyle = FormBorderStyle.Sizable;
 
             // ── BAŞLIK ────────────────────────────────────────────────────
-            pnlBaslik = new Panel
-            {
-                Size = new Size(1000, 60),
-                Location = new Point(0, 0),
-                BackColor = Color.FromArgb(22, 34, 51)
-            };
+            pnlBaslik = UIHelper.BaslikPaneliOlustur("🧾  Fatura Yönetimi", 1000);
             this.Controls.Add(pnlBaslik);
-
-            new Label
-            {
-                Text = "🧾  Fatura Yönetimi",
-                Font = new Font("Segoe UI", 14f, FontStyle.Bold),
-                ForeColor = Color.White,
-                Location = new Point(20, 15),
-                AutoSize = true,
-                Parent = pnlBaslik
-            };
 
             // ── FORM PANELİ ───────────────────────────────────────────────
             pnlForm = new Panel
             {
-                Size = new Size(1000, 140),
-                Location = new Point(0, 60),
-                BackColor = Color.FromArgb(31, 52, 72)
+                Size = new Size(1000, 130),
+                Location = new Point(0, 65),
+                BackColor = UIHelper.RenkPanel
             };
             this.Controls.Add(pnlForm);
 
-            // Yardımcı metotlar
-            Label Lbl(string text, int x, int y)
-            {
-                var l = new Label
-                {
-                    Text = text,
-                    Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                    ForeColor = Color.White,
-                    Location = new Point(x, y),
-                    AutoSize = true
-                };
-                pnlForm.Controls.Add(l);
-                return l;
-            }
-
-            TextBox Txt(int x, int y, int w = 180)
-            {
-                var t = new TextBox
-                {
-                    Size = new Size(w, 30),
-                    Location = new Point(x, y),
-                    Font = new Font("Segoe UI", 10f),
-                    BackColor = Color.FromArgb(44, 62, 80),
-                    ForeColor = Color.White,
-                    BorderStyle = BorderStyle.FixedSingle
-                };
-                pnlForm.Controls.Add(t);
-                return t;
-            }
-
-            // Satış seçimi
-            lblSatis = Lbl("Satış", 20, 15);
-            cmbSatis = new ComboBox
-            {
-                Size = new Size(250, 30),
-                Location = new Point(20, 38),
-                Font = new Font("Segoe UI", 10f),
-                BackColor = Color.FromArgb(44, 62, 80),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            // Satış seçilince tutarı otomatik getir
+            pnlForm.Controls.Add(UIHelper.LblOlustur("Satış", 20, 12));
+            cmbSatis = UIHelper.CmbOlustur(20, 35, 260);
             cmbSatis.SelectedIndexChanged += (s, ev) =>
             {
                 if (cmbSatis.SelectedItem is ComboItem item && item.ID > 0)
@@ -130,48 +61,29 @@ namespace CampStore.UI
             };
             pnlForm.Controls.Add(cmbSatis);
 
-            // Fatura No
-            lblFaturaNo = Lbl("Fatura No", 290, 15);
-            txtFaturaNo = Txt(290, 38, 200);
+            pnlForm.Controls.Add(UIHelper.LblOlustur("Fatura No", 300, 12));
+            txtFaturaNo = UIHelper.TxtOlustur(300, 35, 200);
+            pnlForm.Controls.Add(txtFaturaNo);
 
-            // Otomatik No butonu
-            btnOtomatikNo = new Button
-            {
-                Text = "🔁 Otomatik",
-                Size = new Size(100, 30),
-                Location = new Point(500, 38),
-                BackColor = Color.FromArgb(52, 73, 94),
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 8f),
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand
-            };
-            btnOtomatikNo.FlatAppearance.BorderSize = 0;
-            btnOtomatikNo.Click += (s, ev) =>
-            {
-                // FaturaBL'den otomatik numara üret
+            Button btnOtomatik = UIHelper.BtnOlustur("🔁 Otomatik",
+                UIHelper.RenkMenuKoyu, 510, 35, 110, 32);
+            btnOtomatik.Click += (s, ev) =>
                 txtFaturaNo.Text = faturaBL.FaturaNoUret();
-            };
-            pnlForm.Controls.Add(btnOtomatikNo);
+            pnlForm.Controls.Add(btnOtomatik);
 
-            // Tarih
-            lblTarih = Lbl("Tarih", 620, 15);
+            pnlForm.Controls.Add(UIHelper.LblOlustur("Tarih", 640, 12));
             dtpTarih = new DateTimePicker
             {
-                Size = new Size(160, 30),
-                Location = new Point(620, 38),
+                Size = new Size(160, 32),
+                Location = new Point(640, 35),
                 Font = new Font("Segoe UI", 10f),
                 Format = DateTimePickerFormat.Short,
                 Value = DateTime.Now
             };
             pnlForm.Controls.Add(dtpTarih);
 
-            // Tutar
-            lblTutar = Lbl("Tutar (₺)", 800, 15);
-            txtTutar = Txt(800, 38, 140);
-            //txtTutar.ReadOnly = true; // Satıştan otomatik gelir
-            //txtTutar.BackColor = Color.FromArgb(30, 50, 70);
-            // Sadece rakam ve virgül girilsin
+            pnlForm.Controls.Add(UIHelper.LblOlustur("Tutar (₺)", 820, 12));
+            txtTutar = UIHelper.TxtOlustur(820, 35, 150);
             txtTutar.KeyPress += (s, ev) =>
             {
                 if (!char.IsDigit(ev.KeyChar) &&
@@ -179,101 +91,55 @@ namespace CampStore.UI
                     ev.KeyChar != (char)Keys.Back)
                     ev.Handled = true;
             };
+            pnlForm.Controls.Add(txtTutar);
 
-            // Butonlar — satır 2
-            btnEkle = new Button
-            {
-                Text = "➕ Ekle",
-                Size = new Size(110, 38),
-                Location = new Point(20, 88),
-                BackColor = Color.FromArgb(46, 204, 113),
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand
-            };
-            btnEkle.FlatAppearance.BorderSize = 0;
+            // Butonlar
+            btnEkle = UIHelper.BtnOlustur("➕ Ekle",
+                UIHelper.RenkYesil, 20, 82, 100, 35);
             btnEkle.Click += btnEkle_Click;
             pnlForm.Controls.Add(btnEkle);
 
-            btnGuncelle = new Button
-            {
-                Text = "✏️ Güncelle",
-                Size = new Size(110, 38),
-                Location = new Point(140, 88),
-                BackColor = Color.FromArgb(52, 152, 219),
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand,
-                Enabled = false
-            };
-            btnGuncelle.FlatAppearance.BorderSize = 0;
+            btnGuncelle = UIHelper.BtnOlustur("✏️ Güncelle",
+                UIHelper.RenkMavi, 130, 82, 110, 35);
+            btnGuncelle.Enabled = false;
             btnGuncelle.Click += btnGuncelle_Click;
             pnlForm.Controls.Add(btnGuncelle);
 
-            btnSil = new Button
-            {
-                Text = "🗑️ Sil",
-                Size = new Size(90, 38),
-                Location = new Point(260, 88),
-                BackColor = Color.FromArgb(231, 76, 60),
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand,
-                Enabled = false
-            };
-            btnSil.FlatAppearance.BorderSize = 0;
+            btnSil = UIHelper.BtnOlustur("🗑️ Sil",
+                UIHelper.RenkKirmizi, 250, 82, 90, 35);
+            btnSil.Enabled = false;
             btnSil.Click += btnSil_Click;
             pnlForm.Controls.Add(btnSil);
 
-            btnTemizle = new Button
-            {
-                Text = "🔄 Temizle",
-                Size = new Size(110, 38),
-                Location = new Point(360, 88),
-                BackColor = Color.FromArgb(127, 140, 141),
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 9f),
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand
-            };
-            btnTemizle.FlatAppearance.BorderSize = 0;
-            btnTemizle.Click += btnTemizle_Click;
-            pnlForm.Controls.Add(btnTemizle);
-
-            btnYazdir = new Button
-            {
-                Text = "🖨️ Yazdır",
-                Size = new Size(110, 38),
-                Location = new Point(480, 88),
-                BackColor = Color.FromArgb(52, 73, 94),
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 9f),
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand,
-                Enabled = false
-            };
-            btnYazdir.FlatAppearance.BorderSize = 0;
+            btnYazdir = UIHelper.BtnOlustur("🖨️ Yazdır",
+                UIHelper.RenkMenuKoyu, 350, 82, 110, 35);
+            btnYazdir.Enabled = false;
             btnYazdir.Click += btnYazdir_Click;
             pnlForm.Controls.Add(btnYazdir);
 
+            btnTemizle = UIHelper.BtnOlustur("🔄 Temizle",
+                UIHelper.RenkGri, 470, 82, 110, 35);
+            btnTemizle.Click += (s, ev) => Temizle();
+            pnlForm.Controls.Add(btnTemizle);
 
-            // ── GRID PANELİ ───────────────────────────────────────────────
+            lblToplamFatura = UIHelper.LblOlustur("Toplam: 0 fatura", 700, 90, false, 9);
+            lblToplamFatura.ForeColor = UIHelper.RenkGri;
+            pnlForm.Controls.Add(lblToplamFatura);
+
+            // ── GRID ──────────────────────────────────────────────────────
             pnlGrid = new Panel
             {
-                Size = new Size(1000, 400),
-                Location = new Point(0, 200),
-                BackColor = Color.FromArgb(27, 42, 59)
+                Size = new Size(1000, 430),
+                Location = new Point(0, 195),
+                BackColor = UIHelper.RenkArkaplan
             };
             this.Controls.Add(pnlGrid);
 
             dgvFatura = new DataGridView
             {
-                Size = new Size(960, 370),
-                Location = new Point(20, 15),
-                BackgroundColor = Color.FromArgb(27, 42, 59),
+                Size = new Size(1000, 430),
+                Location = new Point(0, 0),
+                BackgroundColor = UIHelper.RenkArkaplan,
                 BorderStyle = BorderStyle.None,
                 RowHeadersVisible = false,
                 AllowUserToAddRows = false,
@@ -285,32 +151,35 @@ namespace CampStore.UI
             dgvFatura.CellClick += dgvFatura_CellClick;
             pnlGrid.Controls.Add(dgvFatura);
 
+            // ── RESIZE ────────────────────────────────────────────────────
+            UIHelper.FormResizeAyarla(this, pnlBaslik, pnlForm, pnlGrid, dgvFatura);
+
             this.Load += frmFatura_Load;
         }
 
-        // ── FORM YÜKLENINCE ───────────────────────────────────────────────
         private void frmFatura_Load(object sender, EventArgs e)
         {
-            DgvAyarla();
+            UIHelper.DgvAyarla(dgvFatura);
             SatisComboYukle();
             FaturalariYukle();
         }
 
-        // ── SATIŞ COMBO ───────────────────────────────────────────────────
         private void SatisComboYukle()
         {
             try
             {
-                DataTable dt = satisBL.SatisListele();
+                dynamic sonuc = ApiServis.Get<dynamic>("satis");
+                DataTable dt = Newtonsoft.Json.JsonConvert.DeserializeObject<DataTable>(
+                    Newtonsoft.Json.JsonConvert.SerializeObject(sonuc));
+
                 cmbSatis.Items.Clear();
                 cmbSatis.Items.Add(new ComboItem { ID = 0, Ad = "— Satış Seçin —" });
-
                 foreach (DataRow row in dt.Rows)
                     cmbSatis.Items.Add(new ComboItem
                     {
                         ID = Convert.ToInt32(row["SatisID"]),
                         Ad = $"Satış #{row["SatisID"]} — " +
-                             $"{row["MusteriID"]} — " +
+                             $"{row["MusteriAdSoyad"]} — " +
                              $"{Convert.ToDecimal(row["ToplamTutar"]):F2} ₺"
                     });
 
@@ -321,12 +190,17 @@ namespace CampStore.UI
             catch { }
         }
 
-        // ── FATURALARI YÜKLE ──────────────────────────────────────────────
         private void FaturalariYukle()
         {
             try
             {
-                dgvFatura.DataSource = faturaBL.FaturaListele();
+                dynamic sonuc = ApiServis.Get<dynamic>("fatura");
+                DataTable dt = Newtonsoft.Json.JsonConvert.DeserializeObject<DataTable>(
+                    Newtonsoft.Json.JsonConvert.SerializeObject(sonuc));
+
+                dgvFatura.DataSource = dt;
+                UIHelper.DgvAyarla(dgvFatura);
+                lblToplamFatura.Text = $"Toplam: {dt.Rows.Count} fatura";
             }
             catch (Exception ex)
             {
@@ -335,35 +209,33 @@ namespace CampStore.UI
             }
         }
 
-        // ── GRID SATIRINA TIKLANINCA ──────────────────────────────────────
         private void dgvFatura_CellClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
-
-            DataGridViewRow satir = dgvFatura.Rows[e.RowIndex];
-
-            seciliFaturaID = Convert.ToInt32(satir.Cells["FaturaID"].Value);
-            txtFaturaNo.Text = satir.Cells["FaturaNo"].Value.ToString();
-            dtpTarih.Value = Convert.ToDateTime(satir.Cells["Tarih"].Value);
-            txtTutar.Text = satir.Cells["Tutar"].Value.ToString();
-
-            // Satış seç
-            int satisID = Convert.ToInt32(satir.Cells["SatisID"].Value);
-            for (int i = 0; i < cmbSatis.Items.Count; i++)
+            try
             {
-                if (((ComboItem)cmbSatis.Items[i]).ID == satisID)
-                {
-                    cmbSatis.SelectedIndex = i;
-                    break;
-                }
-            }
+                DataGridViewRow satir = dgvFatura.Rows[e.RowIndex];
+                seciliFaturaID = Convert.ToInt32(satir.Cells["FaturaID"].Value);
+                txtFaturaNo.Text = satir.Cells["FaturaNo"].Value?.ToString() ?? "";
+                dtpTarih.Value = Convert.ToDateTime(satir.Cells["Tarih"].Value);
+                txtTutar.Text = satir.Cells["Tutar"].Value?.ToString() ?? "";
 
-            btnGuncelle.Enabled = true;
-            btnSil.Enabled = true;
-            btnYazdir.Enabled = true;
+                int satisID = Convert.ToInt32(satir.Cells["SatisID"].Value);
+                for (int i = 0; i < cmbSatis.Items.Count; i++)
+                    if (((ComboItem)cmbSatis.Items[i]).ID == satisID)
+                    { cmbSatis.SelectedIndex = i; break; }
+
+                btnGuncelle.Enabled = true;
+                btnSil.Enabled = true;
+                btnYazdir.Enabled = true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Hata: " + ex.Message,
+                    "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
-        // ── EKLE ─────────────────────────────────────────────────────────
         private void btnEkle_Click(object sender, EventArgs e)
         {
             if (!decimal.TryParse(txtTutar.Text, out decimal tutar))
@@ -373,35 +245,32 @@ namespace CampStore.UI
                 return;
             }
 
-            Fatura f = new Fatura
+            try
             {
-                SatisID = cmbSatis.SelectedItem is ComboItem cs ? cs.ID : 0,
-                FaturaNo = txtFaturaNo.Text.Trim(),
-                Tarih = dtpTarih.Value,
-                Tutar = tutar
-            };
+                var data = new
+                {
+                    satisID = cmbSatis.SelectedItem is ComboItem cs ? cs.ID : 0,
+                    faturaNo = txtFaturaNo.Text.Trim(),
+                    tarih = dtpTarih.Value,
+                    tutar = tutar
+                };
 
-            string sonuc = faturaBL.FaturaEkle(f);
-
-            if (sonuc == "OK")
-            {
-                MessageBox.Show("Fatura başarıyla eklendi!",
+                ApiServis.Post<dynamic>("fatura", data);
+                MessageBox.Show("Fatura eklendi!",
                     "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Temizle();
                 FaturalariYukle();
             }
-            else
+            catch (Exception ex)
             {
-                MessageBox.Show(sonuc, "Uyarı",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Hata: " + ex.Message,
+                    "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        // ── GÜNCELLE ─────────────────────────────────────────────────────
         private void btnGuncelle_Click(object sender, EventArgs e)
         {
             if (seciliFaturaID == 0) return;
-
             if (!decimal.TryParse(txtTutar.Text, out decimal tutar))
             {
                 MessageBox.Show("Geçerli bir tutar giriniz!",
@@ -409,151 +278,100 @@ namespace CampStore.UI
                 return;
             }
 
-            Fatura f = new Fatura
+            try
             {
-                FaturaID = seciliFaturaID,
-                SatisID = cmbSatis.SelectedItem is ComboItem cs ? cs.ID : 0,
-                FaturaNo = txtFaturaNo.Text.Trim(),
-                Tarih = dtpTarih.Value,
-                Tutar = tutar
-            };
+                var data = new
+                {
+                    satisID = cmbSatis.SelectedItem is ComboItem cs ? cs.ID : 0,
+                    faturaNo = txtFaturaNo.Text.Trim(),
+                    tarih = dtpTarih.Value,
+                    tutar = tutar
+                };
 
-            string sonuc = faturaBL.FaturaGuncelle(f);
-
-            if (sonuc == "OK")
-            {
+                ApiServis.Put<dynamic>($"fatura/{seciliFaturaID}", data);
                 MessageBox.Show("Fatura güncellendi!",
                     "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Temizle();
                 FaturalariYukle();
             }
-            else
+            catch (Exception ex)
             {
-                MessageBox.Show(sonuc, "Uyarı",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Hata: " + ex.Message,
+                    "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        // ── SİL ──────────────────────────────────────────────────────────
         private void btnSil_Click(object sender, EventArgs e)
         {
             if (seciliFaturaID == 0) return;
-
             if (MessageBox.Show("Bu faturayı silmek istediğinize emin misiniz?",
                 "Silme Onayı", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
                 == DialogResult.Yes)
             {
-                string sonuc = faturaBL.FaturaSil(seciliFaturaID);
-
-                if (sonuc == "OK")
+                try
                 {
+                    ApiServis.Delete<dynamic>($"fatura/{seciliFaturaID}");
                     MessageBox.Show("Fatura silindi!",
                         "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     Temizle();
                     FaturalariYukle();
                 }
-                else
+                catch (Exception ex)
                 {
-                    MessageBox.Show(sonuc, "Uyarı",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Hata: " + ex.Message,
+                        "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
-        // ── FATURA YAZDIR ─────────────────────────────────────────────────
+
         private void btnYazdir_Click(object sender, EventArgs e)
         {
-            if (seciliFaturaID == 0)
-            {
-                MessageBox.Show("Lütfen yazdırılacak faturayı seçin!",
-                    "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
+            if (seciliFaturaID == 0) return;
             Fatura fatura = faturaBL.FaturaGetirById(seciliFaturaID);
             if (fatura == null) return;
 
-            // PrintDocument oluştur
-            System.Drawing.Printing.PrintDocument pd =
-                new System.Drawing.Printing.PrintDocument();
-
+            PrintDocument pd = new PrintDocument();
             pd.PrintPage += (s, ev) =>
             {
                 Graphics g = ev.Graphics;
-                Font fontBaslik = new Font("Segoe UI", 18f, FontStyle.Bold);
-                Font fontNormal = new Font("Segoe UI", 10f);
-                Font fontKalin = new Font("Segoe UI", 10f, FontStyle.Bold);
-                Font fontKucuk = new Font("Segoe UI", 8f);
+                Font fBold = new Font("Segoe UI", 14f, FontStyle.Bold);
+                Font fNormal = new Font("Segoe UI", 10f);
+                Font fKalin = new Font("Segoe UI", 10f, FontStyle.Bold);
+                Font fKucuk = new Font("Segoe UI", 8f);
                 Brush siyah = Brushes.Black;
-                Brush gri = new SolidBrush(Color.FromArgb(100, 100, 100));
-                int y = 40;
-                int solKenar = 60;
+                Brush gri = new SolidBrush(Color.Gray);
+                int y = 40, sol = 60;
 
-                // ── ŞİRKET BAŞLIĞI ────────────────────────────────────────
-                g.DrawString("🏕️ CampStore", fontBaslik, siyah, solKenar, y);
-                y += 35;
-                g.DrawString("Kamp Malzemeleri Yönetim Sistemi",
-                    fontNormal, gri, solKenar, y);
-                y += 20;
-                g.DrawString("Tel: 0232 123 45 67 | info@campstore.com",
-                    fontKucuk, gri, solKenar, y);
-                y += 30;
+                g.DrawString("🏕️ CampStore", fBold, siyah, sol, y); y += 30;
+                g.DrawString("Kamp Malzemeleri Yönetim Sistemi", fNormal, gri, sol, y); y += 20;
+                g.DrawString("Tel: 0232 123 45 67 | info@campstore.com", fKucuk, gri, sol, y); y += 25;
+                g.DrawLine(Pens.Black, sol, y, 540, y); y += 15;
 
-                // Çizgi
-                g.DrawLine(Pens.Black, solKenar, y, 540, y);
-                y += 15;
+                g.DrawString("FATURA", new Font("Segoe UI", 13f, FontStyle.Bold), siyah, sol, y); y += 28;
+                g.DrawString("Fatura No :", fKalin, siyah, sol, y);
+                g.DrawString(fatura.FaturaNo, fNormal, siyah, sol + 110, y); y += 22;
+                g.DrawString("Tarih      :", fKalin, siyah, sol, y);
+                g.DrawString(fatura.Tarih.ToString("dd.MM.yyyy"), fNormal, siyah, sol + 110, y); y += 22;
+                g.DrawString("Satış ID :", fKalin, siyah, sol, y);
+                g.DrawString(fatura.SatisID.ToString(), fNormal, siyah, sol + 110, y); y += 30;
 
-                // ── FATURA BAŞLIĞI ─────────────────────────────────────────
-                g.DrawString("FATURA", new Font("Segoe UI", 14f, FontStyle.Bold),
-                    siyah, solKenar, y);
-                y += 30;
-
-                // Fatura bilgileri
-                g.DrawString("Fatura No  :", fontKalin, siyah, solKenar, y);
-                g.DrawString(fatura.FaturaNo, fontNormal, siyah, solKenar + 120, y);
-                y += 22;
-
-                g.DrawString("Tarih        :", fontKalin, siyah, solKenar, y);
-                g.DrawString(fatura.Tarih.ToString("dd.MM.yyyy"), fontNormal, siyah, solKenar + 120, y);
-                y += 22;
-
-                g.DrawString("Satış ID    :", fontKalin, siyah, solKenar, y);
-                g.DrawString(fatura.SatisID.ToString(), fontNormal, siyah, solKenar + 120, y);
-                y += 35;
-
-                // Çizgi
-                g.DrawLine(Pens.Black, solKenar, y, 540, y);
-                y += 15;
-
-                // ── TUTAR ALANI ────────────────────────────────────────────
-                g.DrawString("Toplam Tutar :", fontKalin, siyah, solKenar, y);
+                g.DrawLine(Pens.Black, sol, y, 540, y); y += 15;
+                g.DrawString("Toplam Tutar :", fKalin, siyah, sol, y);
                 g.DrawString($"{fatura.Tutar:F2} ₺",
-                    new Font("Segoe UI", 12f, FontStyle.Bold),
-                    siyah, solKenar + 140, y);
-                y += 40;
-
-                // Alt çizgi
-                g.DrawLine(Pens.Black, solKenar, y, 540, y);
-                y += 15;
-
-                // ── TEŞEKKÜR MESAJI ────────────────────────────────────────
-                g.DrawString("Bizi tercih ettiğiniz için teşekkür ederiz!",
-                    fontKucuk, gri, solKenar, y);
-                y += 15;
-                g.DrawString($"Yazdırma Tarihi: {DateTime.Now:dd.MM.yyyy HH:mm}",
-                    fontKucuk, gri, solKenar, y);
+                    new Font("Segoe UI", 12f, FontStyle.Bold), siyah, sol + 130, y); y += 35;
+                g.DrawLine(Pens.Black, sol, y, 540, y); y += 15;
+                g.DrawString("Bizi tercih ettiğiniz için teşekkür ederiz!", fKucuk, gri, sol, y); y += 15;
+                g.DrawString($"Yazdırma: {DateTime.Now:dd.MM.yyyy HH:mm}", fKucuk, gri, sol, y);
             };
 
-            // Print Preview göster
-            System.Windows.Forms.PrintPreviewDialog preview =
-                new System.Windows.Forms.PrintPreviewDialog();
-            preview.Document = pd;
-            preview.Width = 800;
-            preview.Height = 600;
+            PrintPreviewDialog preview = new PrintPreviewDialog
+            {
+                Document = pd,
+                Width = 800,
+                Height = 600
+            };
             preview.ShowDialog();
         }
-
-        // ── TEMİZLE ──────────────────────────────────────────────────────
-        private void btnTemizle_Click(object sender, EventArgs e) => Temizle();
 
         private void Temizle()
         {
@@ -564,21 +382,7 @@ namespace CampStore.UI
             seciliFaturaID = 0;
             btnGuncelle.Enabled = false;
             btnSil.Enabled = false;
-            btnYazdir.Enabled = false; 
-        }
-
-        // ── DGV AYARLA ───────────────────────────────────────────────────
-        private void DgvAyarla()
-        {
-            dgvFatura.EnableHeadersVisualStyles = false;
-            dgvFatura.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(31, 52, 72);
-            dgvFatura.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgvFatura.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
-            dgvFatura.DefaultCellStyle.BackColor = Color.FromArgb(27, 42, 59);
-            dgvFatura.DefaultCellStyle.ForeColor = Color.White;
-            dgvFatura.DefaultCellStyle.SelectionBackColor = Color.FromArgb(46, 204, 113);
-            dgvFatura.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(22, 34, 51);
-            dgvFatura.RowTemplate.Height = 30;
+            btnYazdir.Enabled = false;
         }
     }
 }

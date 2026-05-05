@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
-// FaturaDAL.cs — Veri Katmanı
-// Fatura tablosuna ait tüm veritabanı işlemleri stored procedure ile yapılır.
 using System.Data;
 using System.Data.SqlClient;
 using CampStore.Entities;
 
+// FaturaDAL.cs — Veri Katmanı
+// Fatura tablosuna ait tüm veritabanı işlemleri stored procedure ile yapılır.
 namespace CampStore.DataAccessLayer
 {
     public class FaturaDAL
@@ -25,11 +24,18 @@ namespace CampStore.DataAccessLayer
 
                 komut.Parameters.AddWithValue("@SatisID", f.SatisID);
                 komut.Parameters.AddWithValue("@FaturaNo", f.FaturaNo);
-                komut.Parameters.AddWithValue("@Tarih", f.Tarih);
+               // komut.Parameters.AddWithValue("@Tarih", f.Tarih);
                 komut.Parameters.AddWithValue("@Tutar", f.Tutar);
 
-                baglanti.Open();
-                komut.ExecuteNonQuery();
+                try
+                {
+                    baglanti.Open();
+                    komut.ExecuteNonQuery();
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Fatura eklenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
         }
 
@@ -45,11 +51,18 @@ namespace CampStore.DataAccessLayer
                 komut.Parameters.AddWithValue("@FaturaID", f.FaturaID);
                 komut.Parameters.AddWithValue("@SatisID", f.SatisID);
                 komut.Parameters.AddWithValue("@FaturaNo", f.FaturaNo);
-                komut.Parameters.AddWithValue("@Tarih", f.Tarih);
+                //komut.Parameters.AddWithValue("@Tarih", f.Tarih);
                 komut.Parameters.AddWithValue("@Tutar", f.Tutar);
 
-                baglanti.Open();
-                komut.ExecuteNonQuery();
+                try
+                {
+                    baglanti.Open();
+                    komut.ExecuteNonQuery();
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Fatura güncellenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
         }
 
@@ -64,8 +77,15 @@ namespace CampStore.DataAccessLayer
 
                 komut.Parameters.AddWithValue("@FaturaID", faturaID);
 
-                baglanti.Open();
-                komut.ExecuteNonQuery();
+                try
+                {
+                    baglanti.Open();
+                    komut.ExecuteNonQuery();
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Fatura silinirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
         }
 
@@ -81,8 +101,15 @@ namespace CampStore.DataAccessLayer
                 SqlCommand komut = new SqlCommand("sp_FaturaListele", baglanti);
                 komut.CommandType = CommandType.StoredProcedure;
 
-                SqlDataAdapter adapter = new SqlDataAdapter(komut);
-                adapter.Fill(tablo);
+                try
+                {
+                    SqlDataAdapter adapter = new SqlDataAdapter(komut);
+                    adapter.Fill(tablo); // Fill metodu bağlantıyı kendisi açıp kapatır.
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Faturalar listelenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
 
             return tablo;
@@ -101,19 +128,26 @@ namespace CampStore.DataAccessLayer
 
                 komut.Parameters.AddWithValue("@FaturaID", faturaID);
 
-                baglanti.Open();
-                SqlDataReader reader = komut.ExecuteReader();
-
-                if (reader.Read())
+                try
                 {
-                    fatura = new Fatura
+                    baglanti.Open();
+                    SqlDataReader reader = komut.ExecuteReader();
+
+                    if (reader.Read())
                     {
-                        FaturaID = Convert.ToInt32(reader["FaturaID"]),
-                        SatisID = Convert.ToInt32(reader["SatisID"]),
-                        FaturaNo = reader["FaturaNo"].ToString(),
-                        Tarih = Convert.ToDateTime(reader["Tarih"]),
-                        Tutar = Convert.ToDecimal(reader["Tutar"])
-                    };
+                        fatura = new Fatura
+                        {
+                            FaturaID = Convert.ToInt32(reader["FaturaID"]),
+                            SatisID = Convert.ToInt32(reader["SatisID"]),
+                            FaturaNo = reader["FaturaNo"].ToString(),
+                            Tarih = Convert.ToDateTime(reader["Tarih"]),
+                            Tutar = Convert.ToDecimal(reader["Tutar"])
+                        };
+                    }
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Fatura bilgisi getirilirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
                 }
             }
 
@@ -134,19 +168,26 @@ namespace CampStore.DataAccessLayer
 
                 komut.Parameters.AddWithValue("@SatisID", satisID);
 
-                baglanti.Open();
-                SqlDataReader reader = komut.ExecuteReader();
-
-                if (reader.Read())
+                try
                 {
-                    fatura = new Fatura
+                    baglanti.Open();
+                    SqlDataReader reader = komut.ExecuteReader();
+
+                    if (reader.Read())
                     {
-                        FaturaID = Convert.ToInt32(reader["FaturaID"]),
-                        SatisID = Convert.ToInt32(reader["SatisID"]),
-                        FaturaNo = reader["FaturaNo"].ToString(),
-                        Tarih = Convert.ToDateTime(reader["Tarih"]),
-                        Tutar = Convert.ToDecimal(reader["Tutar"])
-                    };
+                        fatura = new Fatura
+                        {
+                            FaturaID = Convert.ToInt32(reader["FaturaID"]),
+                            SatisID = Convert.ToInt32(reader["SatisID"]),
+                            FaturaNo = reader["FaturaNo"].ToString(),
+                            Tarih = Convert.ToDateTime(reader["Tarih"]),
+                            Tutar = Convert.ToDecimal(reader["Tutar"])
+                        };
+                    }
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Satışa ait fatura bilgisi getirilirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
                 }
             }
 

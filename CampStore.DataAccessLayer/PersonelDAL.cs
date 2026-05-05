@@ -1,7 +1,6 @@
 ﻿// PersonelDAL.cs — Veri Katmanı
 // Tüm işlemler stored procedure üzerinden yapılır.
 // Doğrudan SQL sorgusu yazılmaz.
-
 using System;
 using System.Data;
 using System.Data.SqlClient;
@@ -14,37 +13,44 @@ namespace CampStore.DataAccessLayer
         // ── LOGIN KONTROLÜ ────────────────────────────────────────────────
         // sp_PersonelLoginKontrol prosedürünü çağırır.
         // TC ve şifre eşleşirse Personel nesnesi döner, eşleşmezse null döner.
-        public Personel LoginKontrol(string tc, string sifre)
+        public Personel LoginKontrol(string girisBilgisi, string sifre)
         {
             Personel personel = null;
 
             using (SqlConnection baglanti = DbBaglanti.BaglantiGetir())
             {
-                // Stored procedure adını veriyoruz, SQL sorgusu değil
                 SqlCommand komut = new SqlCommand("sp_PersonelLoginKontrol", baglanti);
                 komut.CommandType = CommandType.StoredProcedure;
 
-                // Prosedürün beklediği parametreler
-                komut.Parameters.AddWithValue("@TC", tc);
+                // Tek parametre — TC, kullanıcı adı veya email olabilir
+                komut.Parameters.AddWithValue("@GirisBilgisi", girisBilgisi);
                 komut.Parameters.AddWithValue("@Sifre", sifre);
 
-                baglanti.Open();
-                SqlDataReader reader = komut.ExecuteReader();
-
-                // Kayıt geldiyse Personel nesnesine doldur
-                if (reader.Read())
+                try
                 {
-                    personel = new Personel
+                    baglanti.Open();
+                    SqlDataReader reader = komut.ExecuteReader();
+
+                    if (reader.Read())
                     {
-                        PerID = Convert.ToInt32(reader["PerID"]),
-                        PerAd = reader["PerAd"].ToString(),
-                        PerSoyad = reader["PerSoyad"].ToString(),
-                        RolID = Convert.ToInt32(reader["RolID"]),
-                        TC = reader["TC"].ToString(),
-                        Telefon = reader["Telefon"].ToString(),
-                        Adres = reader["Adres"].ToString(),
-                        IseGirisTarihi = Convert.ToDateTime(reader["IseGirisTarihi"])
-                    };
+                        personel = new Personel
+                        {
+                            PerID = Convert.ToInt32(reader["PerID"]),
+                            PerAd = reader["PerAd"].ToString(),
+                            PerSoyad = reader["PerSoyad"].ToString(),
+                            RolID = Convert.ToInt32(reader["RolID"]),
+                            RolAdi = reader["RolAdi"].ToString(),
+                            KullaniciAdi = reader["KullaniciAdi"].ToString(),
+                            TC = reader["TC"].ToString(),
+                            Telefon = reader["Telefon"].ToString(),
+                            Adres = reader["Adres"].ToString(),
+                            IseGirisTarihi = Convert.ToDateTime(reader["IseGirisTarihi"])
+                        };
+                    }
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Giriş bilgileri doğrulanırken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
                 }
             }
 
@@ -71,9 +77,17 @@ namespace CampStore.DataAccessLayer
                 // NULL olabilir, o yüzden DBNull kontrolü yapıyoruz
                 komut.Parameters.AddWithValue("@IstenCikisTarihi",
                     p.IstenCikisTarihi.HasValue ? (object)p.IstenCikisTarihi.Value : DBNull.Value);
+                komut.Parameters.AddWithValue("@Sifre", p.Sifre);
 
-                baglanti.Open();
-                komut.ExecuteNonQuery();
+                try
+                {
+                    baglanti.Open();
+                    komut.ExecuteNonQuery();
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Personel eklenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
         }
 
@@ -89,8 +103,15 @@ namespace CampStore.DataAccessLayer
                 SqlCommand komut = new SqlCommand("sp_PersonelListele", baglanti);
                 komut.CommandType = CommandType.StoredProcedure;
 
-                SqlDataAdapter adapter = new SqlDataAdapter(komut);
-                adapter.Fill(tablo);
+                try
+                {
+                    SqlDataAdapter adapter = new SqlDataAdapter(komut);
+                    adapter.Fill(tablo); // Fill metodu bağlantıyı kendi açıp kapatabilir.
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Personeller listelenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
 
             return tablo;
@@ -116,9 +137,18 @@ namespace CampStore.DataAccessLayer
                 komut.Parameters.AddWithValue("@IseGirisTarihi", p.IseGirisTarihi);
                 komut.Parameters.AddWithValue("@IstenCikisTarihi",
                     p.IstenCikisTarihi.HasValue ? (object)p.IstenCikisTarihi.Value : DBNull.Value);
+                // komut.Parameters.AddWithValue("@Sifre", p.Sifre);
+                komut.Parameters.AddWithValue("@Sifre", p.Sifre);
 
-                baglanti.Open();
-                komut.ExecuteNonQuery();
+                try
+                {
+                    baglanti.Open();
+                    komut.ExecuteNonQuery();
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Personel güncellenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
         }
 
@@ -133,11 +163,19 @@ namespace CampStore.DataAccessLayer
 
                 komut.Parameters.AddWithValue("@PerID", perID);
 
-                baglanti.Open();
-                komut.ExecuteNonQuery();
+                try
+                {
+                    baglanti.Open();
+                    komut.ExecuteNonQuery();
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Personel silinirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
         }
-        // PersonelDAL.cs'e eklenecek metot
+
+        // ── ROL LİSTELE ───────────────────────────────────────────────────
         public DataTable RolListele()
         {
             DataTable tablo = new DataTable();
@@ -147,8 +185,15 @@ namespace CampStore.DataAccessLayer
                 SqlCommand komut = new SqlCommand("sp_RolListele", baglanti);
                 komut.CommandType = CommandType.StoredProcedure;
 
-                SqlDataAdapter adapter = new SqlDataAdapter(komut);
-                adapter.Fill(tablo);
+                try
+                {
+                    SqlDataAdapter adapter = new SqlDataAdapter(komut);
+                    adapter.Fill(tablo);
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Roller listelenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
 
             return tablo;

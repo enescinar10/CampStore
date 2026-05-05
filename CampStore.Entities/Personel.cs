@@ -19,5 +19,9 @@ namespace CampStore.Entities
         public DateTime IseGirisTarihi { get; set; }
         public DateTime? IstenCikisTarihi { get; set; }
         public string Sifre { get; set; } // ← Bu satırı ekle
+
+        // Personel.cs'e ekle
+        public string KullaniciAdi { get; set; }
+        public string RolAdi { get; set; }
     }
 }

@@ -16,26 +16,17 @@ namespace CampStore.BusinessLayer
         // ── LOGIN KONTROLÜ ────────────────────────────────────────────────
         // Giriş bilgilerini doğrular, geçerliyse Personel nesnesini döndürür.
         // UI katmanı dönen nesneyi static bir değişkende saklar (oturum yönetimi).
-        public Personel LoginKontrol(string tc, string sifre, out string mesaj)
+        public Personel LoginKontrol(string girisBilgisi, string sifre, out string mesaj)
         {
-            // out parametresi: metot hem nesne hem mesaj döndürsün diye kullanıyoruz
             mesaj = "";
 
-            // İş kuralı 1: TC boş olamaz
-            if (string.IsNullOrWhiteSpace(tc))
+            // Boş kontrol
+            if (string.IsNullOrWhiteSpace(girisBilgisi))
             {
-                mesaj = "TC kimlik numarası boş bırakılamaz!";
+                mesaj = "Kullanıcı bilgisi boş bırakılamaz!";
                 return null;
             }
 
-            // İş kuralı 2: TC 11 haneli olmalı
-            if (tc.Length != 11)
-            {
-                mesaj = "TC kimlik numarası 11 haneli olmalıdır!";
-                return null;
-            }
-
-            // İş kuralı 3: Şifre boş olamaz
             if (string.IsNullOrWhiteSpace(sifre))
             {
                 mesaj = "Şifre boş bırakılamaz!";
@@ -44,17 +35,14 @@ namespace CampStore.BusinessLayer
 
             try
             {
-                // Tüm kurallar geçildi, DAL'ı çağır
-                Personel personel = personelDAL.LoginKontrol(tc, sifre);
+                Personel personel = personelDAL.LoginKontrol(girisBilgisi, sifre);
 
                 if (personel == null)
                 {
-                    // Veritabanında eşleşme yok
-                    mesaj = "TC veya şifre hatalı!";
+                    mesaj = "Kullanıcı bilgisi veya şifre hatalı!";
                     return null;
                 }
 
-                // Giriş başarılı
                 mesaj = "OK";
                 return personel;
             }

@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
-// SatisDAL.cs — Veri Katmanı
-// Satis ve SatisDetay tablosuna ait tüm işlemler stored procedure ile yapılır.
 using System.Data;
 using System.Data.SqlClient;
 using CampStore.Entities;
 
+// SatisDAL.cs — Veri Katmanı
+// Satis ve SatisDetay tablosuna ait tüm işlemler stored procedure ile yapılır.
 namespace CampStore.DataAccessLayer
 {
     public class SatisDAL
@@ -52,11 +51,15 @@ namespace CampStore.DataAccessLayer
 
                     return yeniSatisID;
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     // Hata olursa geri al
                     transaction.Rollback();
-                    throw;
+
+                    if (ex is SqlException)
+                        throw new Exception("Satış eklenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+
+                    throw new Exception(ex.Message);
                 }
             }
         }
@@ -76,8 +79,15 @@ namespace CampStore.DataAccessLayer
                 komut.Parameters.AddWithValue("@ToplamTutar", s.ToplamTutar);
                 komut.Parameters.AddWithValue("@Durum", s.Durum);
 
-                baglanti.Open();
-                komut.ExecuteNonQuery();
+                try
+                {
+                    baglanti.Open();
+                    komut.ExecuteNonQuery();
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Satış güncellenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
         }
 
@@ -92,8 +102,15 @@ namespace CampStore.DataAccessLayer
 
                 komut.Parameters.AddWithValue("@SatisID", satisID);
 
-                baglanti.Open();
-                komut.ExecuteNonQuery();
+                try
+                {
+                    baglanti.Open();
+                    komut.ExecuteNonQuery();
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Satış silinirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
         }
 
@@ -109,8 +126,15 @@ namespace CampStore.DataAccessLayer
                 SqlCommand komut = new SqlCommand("sp_SatisListele", baglanti);
                 komut.CommandType = CommandType.StoredProcedure;
 
-                SqlDataAdapter adapter = new SqlDataAdapter(komut);
-                adapter.Fill(tablo);
+                try
+                {
+                    SqlDataAdapter adapter = new SqlDataAdapter(komut);
+                    adapter.Fill(tablo);
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Satışlar listelenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
 
             return tablo;
@@ -129,20 +153,27 @@ namespace CampStore.DataAccessLayer
 
                 komut.Parameters.AddWithValue("@SatisID", satisID);
 
-                baglanti.Open();
-                SqlDataReader reader = komut.ExecuteReader();
-
-                if (reader.Read())
+                try
                 {
-                    satis = new Satis
+                    baglanti.Open();
+                    SqlDataReader reader = komut.ExecuteReader();
+
+                    if (reader.Read())
                     {
-                        SatisID = Convert.ToInt32(reader["SatisID"]),
-                        MusteriID = Convert.ToInt32(reader["MusteriID"]),
-                        PerID = Convert.ToInt32(reader["PerID"]),
-                        SatisTarihi = Convert.ToDateTime(reader["SatisTarihi"]),
-                        ToplamTutar = Convert.ToDecimal(reader["ToplamTutar"]),
-                        Durum = reader["Durum"].ToString()
-                    };
+                        satis = new Satis
+                        {
+                            SatisID = Convert.ToInt32(reader["SatisID"]),
+                            MusteriID = Convert.ToInt32(reader["MusteriID"]),
+                            PerID = Convert.ToInt32(reader["PerID"]),
+                            SatisTarihi = Convert.ToDateTime(reader["SatisTarihi"]),
+                            ToplamTutar = Convert.ToDecimal(reader["ToplamTutar"]),
+                            Durum = reader["Durum"].ToString()
+                        };
+                    }
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Satış bilgisi getirilirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
                 }
             }
 
@@ -163,8 +194,15 @@ namespace CampStore.DataAccessLayer
 
                 komut.Parameters.AddWithValue("@Durum", durum);
 
-                SqlDataAdapter adapter = new SqlDataAdapter(komut);
-                adapter.Fill(tablo);
+                try
+                {
+                    SqlDataAdapter adapter = new SqlDataAdapter(komut);
+                    adapter.Fill(tablo);
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Satışlar duruma göre listelenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
 
             return tablo;
@@ -207,18 +245,24 @@ namespace CampStore.DataAccessLayer
 
                     if (mevcutStok < 0)
                     {
-                        // Stok negatife düştü — geri al
+                        // Stok negatife düştü — geri al ve kendi hatamızı fırlat
                         transaction.Rollback();
-                        throw new Exception("Yetersiz stok! Mevcut stok: " +
-                            (mevcutStok + sd.Miktar));
+                        throw new Exception("Yetersiz stok! Mevcut stok: " + (mevcutStok + sd.Miktar));
                     }
 
                     transaction.Commit();
                 }
-                catch
+                catch (Exception ex)
                 {
-                    transaction.Rollback();
-                    throw;
+                    if (transaction.Connection != null)
+                    {
+                        transaction.Rollback();
+                    }
+
+                    if (ex is SqlException)
+                        throw new Exception("Satış detayı eklenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+
+                    throw new Exception(ex.Message);
                 }
             }
         }
@@ -238,8 +282,15 @@ namespace CampStore.DataAccessLayer
                 komut.Parameters.AddWithValue("@Miktar", sd.Miktar);
                 komut.Parameters.AddWithValue("@BirimFiyat", sd.BirimFiyat);
 
-                baglanti.Open();
-                komut.ExecuteNonQuery();
+                try
+                {
+                    baglanti.Open();
+                    komut.ExecuteNonQuery();
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Satış detayı güncellenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
         }
 
@@ -254,8 +305,15 @@ namespace CampStore.DataAccessLayer
 
                 komut.Parameters.AddWithValue("@DetayID", detayID);
 
-                baglanti.Open();
-                komut.ExecuteNonQuery();
+                try
+                {
+                    baglanti.Open();
+                    komut.ExecuteNonQuery();
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Satış detayı silinirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
         }
 
@@ -273,8 +331,15 @@ namespace CampStore.DataAccessLayer
 
                 komut.Parameters.AddWithValue("@SatisID", satisID);
 
-                SqlDataAdapter adapter = new SqlDataAdapter(komut);
-                adapter.Fill(tablo);
+                try
+                {
+                    SqlDataAdapter adapter = new SqlDataAdapter(komut);
+                    adapter.Fill(tablo);
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Satışa ait detaylar listelenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
 
             return tablo;
@@ -291,8 +356,15 @@ namespace CampStore.DataAccessLayer
                 SqlCommand komut = new SqlCommand("sp_SatisDetayListele", baglanti);
                 komut.CommandType = CommandType.StoredProcedure;
 
-                SqlDataAdapter adapter = new SqlDataAdapter(komut);
-                adapter.Fill(tablo);
+                try
+                {
+                    SqlDataAdapter adapter = new SqlDataAdapter(komut);
+                    adapter.Fill(tablo);
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Tüm satış detayları listelenirken veritabanı kaynaklı bir hata oluştu: " + ex.Message);
+                }
             }
 
             return tablo;
